@@ -2,3 +2,4 @@
 __pycache__/
 Ignore_*/
 *.egg-info/
+Test_project*/
