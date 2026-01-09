@@ -19,6 +19,13 @@ ORIG_LABELS = [
 # DD. CONFIG_SETTINGS
 # config = {"IMAGES_PATH":str}
 # interp. A dictionary storing configuration settings for the application.
-config = {"IMAGES_PATH": "", "ANNOTATIONS_PATH": "", "PROJECT_LOADED": False, "MODEL_PATHS": []}
+config = {
+    "IMAGES_PATH": "",
+    "ANNOTATIONS_PATH": "",
+    "PROJECT_LOADED": False,
+    "MODEL_PATHS": [],
+    "LABELS": [],
+    "MODE": "BOX",
+}
 
 

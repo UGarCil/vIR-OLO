@@ -1,6 +1,7 @@
 ''' The main integration of GUI with the utilities and auxiliary files needed to run spectrAI'''
 
 from ui.main_ui import Ui_MainWindow
+from ui.canvas_widget import CanvasWidget
 from tools.image_loader import ImageManager
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
@@ -19,6 +20,16 @@ class App(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowTitle("vIR-OLO v.1.0.0")
+
+        # swap the static QLabel for the interactive CanvasWidget
+        self.canvas = CanvasWidget(self.ui.widget_5)
+        self.canvas.setObjectName("spectroPanel")
+        self.canvas.setMinimumSize(self.ui.spectroPanel.minimumSize())
+        self.canvas.setMaximumSize(self.ui.spectroPanel.maximumSize())
+        self.canvas.setStyleSheet(self.ui.spectroPanel.styleSheet())
+        self.ui.horizontalLayout_12.replaceWidget(self.ui.spectroPanel, self.canvas)
+        self.ui.spectroPanel.deleteLater()
+        self.ui.spectroPanel = self.canvas
         # Add a resize timer to prevent too frequent updates
         self.resize_timer = QtCore.QTimer()
         self.resize_timer.setSingleShot(True)
@@ -35,6 +46,9 @@ class App(QMainWindow):
         self.ui.openBtn.clicked.connect(self.open_images_folder)
         self.ui.prevBtn.clicked.connect(lambda: self.change_image('-'))
         self.ui.nextBtn.clicked.connect(lambda: self.change_image('+'))
+        self.ui.editBtn.setCheckable(True)
+        self.ui.editBtn.setChecked(True)
+        self.ui.editBtn.toggled.connect(self.on_edit_mode_toggled)
         # preload the image manager
         self.image_manager = None
         self.model_manager = ModelManager()
@@ -44,6 +58,9 @@ class App(QMainWindow):
         icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui", "icons", "editLabel_icon.png")
         self.icon_editLabel.addPixmap(QtGui.QPixmap(icon_path), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         
+        # initialize mode to BOX and cursor to crosshair for drawing
+        self.on_edit_mode_toggled(True)
+
     
     def wrapper_default_downloader(self):
         """Wrapper method to handle the download of default models"""
@@ -98,6 +115,8 @@ class App(QMainWindow):
         self.image_manager = ImageManager(images_path=config.get("IMAGES_PATH", ""),
                                           annotations_path=config.get("ANNOTATIONS_PATH", ""))
         self.image_manager.render(self.ui.spectroPanel)
+        if hasattr(self.ui.spectroPanel, "set_image_manager"):
+            self.ui.spectroPanel.set_image_manager(self.image_manager)
         print("attempted render of image")
         
     def open_images_folder(self):
@@ -109,6 +128,16 @@ class App(QMainWindow):
             os.startfile(images_path)
         else:
             QMessageBox.warning(self, "Open Images Folder", "Images folder path is not set. Create or load a new project first!")
+    
+    def update_canvas_labels(self):
+        '''
+        Update the canvas widget with current labels from config["LABELS"].
+        Should be called after loading labels from dataset.yaml.
+        '''
+        if hasattr(self.ui, 'spectroPanel') and hasattr(self.ui.spectroPanel, 'set_labels'):
+            labels = config.get("LABELS", [])
+            self.ui.spectroPanel.set_labels(labels)
+            print(f"Canvas labels updated with {len(labels)} labels")
     
     def get_labels_from_yaml(self, project_folder):
         '''
@@ -236,6 +265,7 @@ class App(QMainWindow):
                         # Load labels from dataset.yaml and update buttons
                         if self.get_labels_from_yaml(folder_path):
                             self.update_label_buttons()
+                            self.update_canvas_labels()
                         
                         QMessageBox.information(self, "Load Project", f"Project loaded successfully!\nImages Path: {config['IMAGES_PATH']}\nAnnotations Path: {config['ANNOTATIONS_PATH']}")
                     else:
@@ -329,6 +359,7 @@ class App(QMainWindow):
                 # Load labels from the created dataset.yaml and update buttons
                 if self.get_labels_from_yaml(folder_path):
                     self.update_label_buttons()
+                    self.update_canvas_labels()
                 
             success = True
         # Let the user know the process is done with success
@@ -350,6 +381,33 @@ class App(QMainWindow):
             else:
                 self.image_manager.previous_image()
             self.image_manager.render(self.ui.spectroPanel)
+    
+    def update_canvas_labels(self):
+        """
+        Update the canvas widget with current labels from config["LABELS"].
+        Should be called after loading labels from dataset.yaml.
+        """
+        labels = config.get("LABELS", [])
+        self.ui.spectroPanel.set_labels(labels)
+        print(f"Canvas labels updated with {len(labels)} labels")
+
+    def on_edit_mode_toggled(self, checked: bool):
+        '''
+        Toggle interaction mode between drawing boxes and alternate modes.
+        When checked, sets mode to "BOX" enabling drawing on the canvas;
+        when unchecked, switches to "ERASE" (placeholder for future behavior).
+        '''
+        config["MODE"] = "BOX" if checked else "ERASE"
+
+        
+        # change cursor to indicate drawing vs neutral
+        self.ui.spectroPanel.setCursor(Qt.CrossCursor if config["MODE"] == "BOX" else Qt.ArrowCursor)
+
+        # cancel any in-progress preview when leaving BOX mode
+        if config["MODE"] != "BOX" and self.ui.spectroPanel.is_box_started:
+            self.ui.spectroPanel.is_box_started = False
+            self.ui.spectroPanel.update()
+
 
 if __name__ == "__main__":
     import sys

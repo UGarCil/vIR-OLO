@@ -24,6 +24,14 @@ class ImageManager():
         self.current_index = 0
         self.annotations = sorted([jn(annotations_path, f) for f in os.listdir(annotations_path) if f.lower().endswith(('.txt'))])
         self.image_list = sorted([jn(images_path, f) for f in os.listdir(images_path) if f.lower().endswith(('.png', '.jpg', '.jpeg'))])
+        
+        # Transformation data for coordinate conversions
+        self.original_width = None
+        self.original_height = None
+        self.scale_x = 1.0
+        self.scale_y = 1.0
+        self.offset_x = 0
+        self.offset_y = 0
 
     def load_image(self):
         """
@@ -112,11 +120,78 @@ class ImageManager():
         
         # Load the original pixmap
         pixmap = self.load_image()
+        
+        # Store original dimensions
+        self.original_width = pixmap.width()
+        self.original_height = pixmap.height()
+        
         # Scale it using fit_to_window
         scaled_pixmap = self.fit_to_window(width, height, pixmap)
         
+        # Calculate transformation data
+        scaled_width = scaled_pixmap.width()
+        scaled_height = scaled_pixmap.height()
+        
+        # Calculate scale ratios
+        self.scale_x = scaled_width / self.original_width if self.original_width > 0 else 1.0
+        self.scale_y = scaled_height / self.original_height if self.original_height > 0 else 1.0
+        
+        # Calculate offsets (centered positioning when image is smaller than label)
+        self.offset_x = (width - scaled_width) // 2
+        self.offset_y = (height - scaled_height) // 2
+        
         # Set the scaled pixmap to the label
         QtLabel.setPixmap(scaled_pixmap)
+    
+    def screen_to_image_coords(self, screen_x: int, screen_y: int) -> tuple:
+        """
+        Convert screen coordinates to original image coordinates.
+        
+        Args:
+            screen_x (int): X coordinate on screen
+            screen_y (int): Y coordinate on screen
+            
+        Returns:
+            tuple: (image_x, image_y) in original image space
+        """
+        # Subtract offset to get position relative to scaled image
+        relative_x = screen_x - self.offset_x
+        relative_y = screen_y - self.offset_y
+        
+        # Check bounds
+        if relative_x < 0 or relative_y < 0:
+            return None
+        
+        # Convert to original image coordinates using scale factors
+        image_x = int(relative_x / self.scale_x) if self.scale_x > 0 else 0
+        image_y = int(relative_y / self.scale_y) if self.scale_y > 0 else 0
+        
+        # Clamp to image bounds
+        image_x = max(0, min(image_x, self.original_width - 1))
+        image_y = max(0, min(image_y, self.original_height - 1))
+        
+        return image_x, image_y
+    
+    def image_to_screen_coords(self, image_x: int, image_y: int) -> tuple:
+        """
+        Convert original image coordinates to screen coordinates.
+        
+        Args:
+            image_x (int): X coordinate in original image
+            image_y (int): Y coordinate in original image
+            
+        Returns:
+            tuple: (screen_x, screen_y) on the screen
+        """
+        # Scale from image space to screen space
+        scaled_x = int(image_x * self.scale_x)
+        scaled_y = int(image_y * self.scale_y)
+        
+        # Add offset to get absolute screen position
+        screen_x = scaled_x + self.offset_x
+        screen_y = scaled_y + self.offset_y
+        
+        return screen_x, screen_y
         
     def next_image(self):
         '''
