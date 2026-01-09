@@ -1,0 +1,15 @@
+{
+  "IMAGES_PATH": "E:/Garcilazo/Python/00Exercises/CHEMAI_projects/00_Qichen/spectrAI/Test_project\\images\\train",
+  "ANNOTATIONS_PATH": "E:/Garcilazo/Python/00Exercises/CHEMAI_projects/00_Qichen/spectrAI/Test_project\\labels\\train",
+  "ROOT": "E:/Garcilazo/Python/00Exercises/CHEMAI_projects/00_Qichen/spectrAI/Test_project",
+  "MODEL_PATHS": [
+    {
+      "name": "spectrai_ultralytics_ir.pt",
+      "path": "E:\\Garcilazo\\Python\\00Exercises\\CHEMAI_projects\\00_Qichen\\spectrAI\\Test_project\\models\\spectrai-IR-YOLO\\spectrai_ultralytics_ir.pt"
+    },
+    {
+      "name": "spectrai_custom_ir_nubby.pt",
+      "path": "E:\\Garcilazo\\Python\\00Exercises\\CHEMAI_projects\\00_Qichen\\spectrAI\\Test_project\\models\\spectrai-IR-YOLO\\spectrai_custom_ir_nubby.pt"
+    }
+  ]
+}

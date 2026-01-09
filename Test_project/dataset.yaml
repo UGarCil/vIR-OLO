@@ -1,0 +1,17 @@
+path: E:/Garcilazo/Python/00Exercises/CHEMAI_projects/00_Qichen/spectrAI/Test_project
+train: images/train
+val: images/val
+nc: 12
+names:
+  0: aromatics
+  1: alcohols
+  2: amines
+  3: esters
+  4: alkene
+  5: carb. acids
+  6: ketones
+  7: phenol
+  8: nitriles
+  9: amides
+  10: aldehydes
+  11: alkyne
