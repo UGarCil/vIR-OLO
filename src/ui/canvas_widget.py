@@ -117,7 +117,7 @@ class CanvasWidget(QLabel):
         # Ensure the pixmap is centered so offsets computed in ImageManager match display
         self.setAlignment(Qt.AlignCenter)
         
-        # ==================== External References ====================
+        # ==================== External References ======================================
         # These are set by the parent application and provide access to required systems
         self.image_manager = None  # Will be set by parent app via set_image_manager()
         self.box_manager = BoxManager()  # Local box manager for this canvas
@@ -629,6 +629,51 @@ class CanvasWidget(QLabel):
                                                    self.image_manager.original_height - 1))
         
         # Trigger repaint to update preview box in paintEvent
+        self.update()
+    
+    # =====================================================================
+    # State Reset Methods
+    # =====================================================================
+    
+    def reset_current_drawing(self):
+        """
+        Cancel any in-progress bounding box drawing.
+        
+        Resets the drawing state without affecting existing boxes.
+        Used when the user presses Escape or changes modes.
+        
+        Returns:
+            None
+        
+        Side Effects:
+            - Sets is_box_started to False
+            - Triggers widget repaint to remove preview
+        """
+        if self.is_box_started:
+            self.is_box_started = False
+            self.update()
+            print("Box drawing cancelled")
+
+    def reset_for_new_image(self):
+        """
+        Full reset when changing to a new image.
+        
+        Cancels any in-progress drawing, clears all boxes, and resets
+        selection state. Called when user navigates to a different image
+        (e.g., pressing A/D keys).
+        
+        Returns:
+            None
+        
+        Side Effects:
+            - Cancels in-progress drawing via reset_current_drawing()
+            - Clears all boxes from box_manager
+            - Resets selected_box_id to None
+            - Triggers widget repaint
+        """
+        self.reset_current_drawing()
+        self.box_manager.clear()
+        self.selected_box_id = None
         self.update()
     
     # =====================================================================

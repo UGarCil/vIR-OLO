@@ -44,8 +44,8 @@ class App(QMainWindow):
         self.ui.actionDownloadDefaultModels.triggered.connect(self.wrapper_default_downloader)
         # connect buttons to specific functions
         self.ui.openBtn.clicked.connect(self.open_images_folder)
-        self.ui.prevBtn.clicked.connect(lambda: self.change_image('-'))
-        self.ui.nextBtn.clicked.connect(lambda: self.change_image('+'))
+        self.ui.prevBtn.clicked.connect(lambda: self.navigate_image('-'))
+        self.ui.nextBtn.clicked.connect(lambda: self.navigate_image('+'))
         self.ui.editBtn.setCheckable(True)
         self.ui.editBtn.setChecked(False)
         self.ui.editBtn.toggled.connect(self.on_edit_mode_toggled)
@@ -422,9 +422,91 @@ class App(QMainWindow):
         else:
             QMessageBox.warning(self, "New Project", "No folder selected. Project creation cancelled.")
     
-    def change_image(self, sign:str = '+'):
+    def navigate_image(self, direction: str):
         '''
-        Load the previous image in the list
+        Navigate to previous or next image with proper canvas reset.
+        
+        Saves current annotations, resets any in-progress drawing and clears 
+        existing boxes before changing to the new image. Used by both buttons 
+        and keyboard shortcuts.
+        
+        Args:
+            direction (str): '+' for next image, '-' for previous image
+        '''
+        if config.get("PROJECT_LOADED", False):
+            self.save_current_annotations()
+            self.ui.spectroPanel.reset_for_new_image()
+            self.change_image(direction)
+
+    def save_current_annotations(self):
+        '''
+        Save current bounding box annotations to a YOLO format .txt file.
+        
+        Converts all boxes to YOLO format:
+            label_id  x_center  y_center  width  height
+        
+        Where x_center, y_center, width, height are normalized (0.0-1.0)
+        relative to the original image dimensions.
+        
+        The file is saved to config["ANNOTATIONS_PATH"] with the same
+        base name as the current image.
+        
+        Note: If no boxes exist, the file is not created/overwritten to
+        preserve any existing annotations.
+        
+        Returns:
+            bool: True if saved successfully, False otherwise
+        '''
+        # Check if we have an image loaded
+        if not self.image_manager or not self.image_manager.current_image:
+            return False
+        
+        # Get all boxes - skip saving if empty to avoid overwriting existing annotations
+        boxes = self.ui.spectroPanel.box_manager.get_all_boxes()
+        if not boxes:
+            print("No annotations to save, skipping to preserve existing file")
+            return False
+        
+        # Get image dimensions for normalization
+        img_width = self.image_manager.original_width
+        img_height = self.image_manager.original_height
+        
+        if img_width <= 0 or img_height <= 0:
+            print("Warning: Invalid image dimensions, cannot save annotations")
+            return False
+        
+        # Get the current image filename and create annotation filename
+        current_image_path = self.image_manager.current_image
+        image_basename = os.path.basename(current_image_path)
+        annotation_basename = os.path.splitext(image_basename)[0] + ".txt"
+        annotation_path = os.path.join(config["ANNOTATIONS_PATH"], annotation_basename)
+        
+        # Convert boxes to YOLO format and write to file
+        with open(annotation_path, 'w') as f:
+            for box in boxes:
+                # Calculate normalized center coordinates
+                x_center = (box.x + box.width / 2) / img_width
+                y_center = (box.y + box.height / 2) / img_height
+                
+                # Calculate normalized width and height
+                norm_width = box.width / img_width
+                norm_height = box.height / img_height
+                
+                # Write in YOLO format: label_id x_center y_center width height
+                f.write(f"{box.label_id}\t{x_center:.6f}\t{y_center:.6f}\t{norm_width:.6f}\t{norm_height:.6f}\n")
+        
+        print(f"Saved {len(boxes)} annotations to: {annotation_path}")
+        return True
+
+    def change_image(self, sign: str = '+'):
+        '''
+        Load the previous or next image in the list.
+        
+        Note: For user-facing navigation, use navigate_image() instead
+        which handles canvas reset.
+        
+        Args:
+            sign (str): '+' for next image, '-' for previous image
         '''
         if config["PROJECT_LOADED"]:
             # update the index and call render again
@@ -515,6 +597,41 @@ class App(QMainWindow):
         '''
         if checked:
             self._set_mode("UPDATE")
+
+    def keyPressEvent(self, event):
+        '''
+        Handle keyboard input for application-level shortcuts.
+        
+        Supports:
+            - Escape: Cancel in-progress box drawing (in BOX mode)
+            - A or Left Arrow: Navigate to previous image
+            - D or Right Arrow: Navigate to next image
+        
+        Args:
+            event (QKeyEvent): PyQt5 key event containing key info.
+        '''
+        # Cancel box drawing with Escape
+        if event.key() == Qt.Key_Escape:
+            if config.get("MODE") == "BOX":
+                self.ui.spectroPanel.reset_current_drawing()
+                return
+        
+        # Image navigation requires a loaded project
+        if not config.get("PROJECT_LOADED", False):
+            super().keyPressEvent(event)
+            return
+        
+        # Navigate to previous image
+        if event.key() in (Qt.Key_A, Qt.Key_Left):
+            self.navigate_image('-')
+            return
+        
+        # Navigate to next image
+        if event.key() in (Qt.Key_D, Qt.Key_Right):
+            self.navigate_image('+')
+            return
+        
+        super().keyPressEvent(event)
 
 
 if __name__ == "__main__":
