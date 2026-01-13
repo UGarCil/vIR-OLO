@@ -329,6 +329,8 @@ class App(QMainWindow):
                         self.list_models_in_dropdown()
                     # Initialize the image manager with the loaded paths
                     self.initialize_image_manager()
+                    # Load annotations for the first image
+                    self.load_annotations_for_current_image()
             else:
                 QMessageBox.warning(self, "Load Project", "No configuration file found. Please create a new project.")
 
@@ -498,6 +500,79 @@ class App(QMainWindow):
         print(f"Saved {len(boxes)} annotations to: {annotation_path}")
         return True
 
+    def load_annotations_for_current_image(self):
+        '''
+        Load existing annotations from a YOLO format .txt file for the current image.
+        
+        Reads the annotation file matching the current image name from
+        config["ANNOTATIONS_PATH"], parses each line, and adds boxes
+        to the box_manager.
+        
+        Returns:
+            bool: True if annotations were loaded, False otherwise
+        '''
+        # Check if we have an image loaded
+        if not self.image_manager or not self.image_manager.current_image:
+            return False
+        
+        # Get image dimensions for denormalization
+        img_width = self.image_manager.original_width
+        img_height = self.image_manager.original_height
+        
+        if img_width <= 0 or img_height <= 0:
+            print("Warning: Invalid image dimensions, cannot load annotations")
+            return False
+        
+        # Get the current image filename and find matching annotation file
+        current_image_path = self.image_manager.current_image
+        image_basename = os.path.basename(current_image_path)
+        annotation_basename = os.path.splitext(image_basename)[0] + ".txt"
+        annotation_path = os.path.join(config["ANNOTATIONS_PATH"], annotation_basename)
+        
+        # Check if annotation file exists
+        if not os.path.exists(annotation_path):
+            print(f"No annotation file found: {annotation_path}")
+            return False
+        
+        # Read and parse the annotation file
+        boxes_loaded = 0
+        with open(annotation_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Parse YOLO format: label_id x_center y_center width height
+                parts = line.split()
+                if len(parts) >= 5:
+                    try:
+                        label_id = int(parts[0])
+                        x_center = float(parts[1])
+                        y_center = float(parts[2])
+                        norm_width = float(parts[3])
+                        norm_height = float(parts[4])
+                        
+                        # Add box using box_manager helper
+                        self.ui.spectroPanel.box_manager.add_box_from_yolo(
+                            label_id=label_id,
+                            x_center=x_center,
+                            y_center=y_center,
+                            norm_width=norm_width,
+                            norm_height=norm_height,
+                            img_width=img_width,
+                            img_height=img_height
+                        )
+                        boxes_loaded += 1
+                    except ValueError as e:
+                        print(f"Warning: Could not parse annotation line: {line} - {e}")
+                        continue
+        
+        if boxes_loaded > 0:
+            print(f"Loaded {boxes_loaded} annotations from: {annotation_path}")
+            self.ui.spectroPanel.update()
+        
+        return boxes_loaded > 0
+
     def change_image(self, sign: str = '+'):
         '''
         Load the previous or next image in the list.
@@ -515,6 +590,8 @@ class App(QMainWindow):
             else:
                 self.image_manager.previous_image()
             self.image_manager.render(self.ui.spectroPanel)
+            # Load annotations for the new image
+            self.load_annotations_for_current_image()
     
     def update_canvas_labels(self):
         """

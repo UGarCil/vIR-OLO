@@ -86,6 +86,43 @@ class BoxManager:
         """
         return [box for box in self.boxes if box.label_id == label_id]
     
+    def add_box_from_yolo(self, label_id: int, x_center: float, y_center: float,
+                          norm_width: float, norm_height: float,
+                          img_width: int, img_height: int) -> str:
+        """
+        Create and add a bounding box from YOLO format coordinates.
+        
+        Converts normalized YOLO coordinates to absolute image coordinates
+        and creates a BoundingBox instance.
+        
+        Args:
+            label_id (int): The label index for this box
+            x_center (float): Normalized x center (0.0-1.0)
+            y_center (float): Normalized y center (0.0-1.0)
+            norm_width (float): Normalized width (0.0-1.0)
+            norm_height (float): Normalized height (0.0-1.0)
+            img_width (int): Original image width in pixels
+            img_height (int): Original image height in pixels
+        
+        Returns:
+            str: The box_id of the newly created box
+        """
+        # Convert normalized coordinates to absolute pixels
+        abs_width = norm_width * img_width
+        abs_height = norm_height * img_height
+        abs_x = (x_center * img_width) - (abs_width / 2)
+        abs_y = (y_center * img_height) - (abs_height / 2)
+        
+        # Create and add the box
+        box = BoundingBox(
+            x=int(abs_x),
+            y=int(abs_y),
+            width=int(abs_width),
+            height=int(abs_height),
+            label_id=label_id
+        )
+        return self.add_box(box)
+    
     def update_box(self, box_id: str, x: int = None, y: int = None, 
                    width: int = None, height: int = None, label_id: int = None) -> bool:
         """
