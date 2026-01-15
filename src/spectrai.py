@@ -911,6 +911,7 @@ class App(QMainWindow):
         Args:
             event (QKeyEvent): PyQt5 key event containing key info.
         '''
+        
         # Cancel box drawing with Escape
         if event.key() == Qt.Key_Escape:
             if config.get("MODE") == "BOX":
