@@ -1,5 +1,6 @@
 ''' The main integration of GUI with the utilities and auxiliary files needed to run spectrAI'''
 
+import sys
 from ui.main_ui import Ui_MainWindow
 from ui.canvas_widget import CanvasWidget
 from ui.label_editor_dialog import LabelEditorDialog
@@ -16,12 +17,20 @@ import json
 import yaml
 import shutil
 import time
+# from ultralytics import YOLO
+from models.predict import PredictorManager
+
+QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
 class App(QMainWindow):
     def __init__(self):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowTitle("vIR-OLO v.1.0.0")
+        # Set default value for CurrentModelLabel
+        self.ui.CurrentModelLabel.setText("")
 
         # swap the static QLabel for the interactive CanvasWidget
         self.canvas = CanvasWidget(self.ui.widget_5)
@@ -68,6 +77,8 @@ class App(QMainWindow):
             "ERASE": self.ui.trashBtn,
             "UPDATE": self.ui.updateBoxLabelBtn
         }
+        # preload the predictor manager
+        self.predictor_manager = None
         
         # preload the image manager
         self.image_manager = None
@@ -83,9 +94,107 @@ class App(QMainWindow):
 
         self.ui.addBtn.clicked.connect(self.on_add_label_clicked)
         self.ui.GoBtn.clicked.connect(self.on_go_btn_clicked)
-        
         self.ui.ImageGoLineEd.returnPressed.connect(self.on_go_btn_clicked)
+        self.ui.actionLoadModel.triggered.connect(self.on_load_model_clicked)
 
+        # Connect predictBtn to prediction handler
+        self.ui.predictBtn.clicked.connect(self.on_click_predict)
+    
+    def update_statusLabel(self, message: str):
+        """
+        Update the status label in the UI and the config dictionary.
+        
+        Args:
+            message (str): The new status message to set.
+        """
+        self.ui.StatusLabel.setText(message)
+        # update_status(message)
+        
+    def closeEvent(self, event):
+        """
+        Called when the window is closing.
+        Save current annotations before exiting.
+        """
+        self.save_current_annotations()
+        event.accept()  # Accept the close event to proceed with closing
+
+    def on_load_model_clicked(self):
+        from PyQt5.QtWidgets import QFileDialog, QMessageBox
+        folder = QFileDialog.getExistingDirectory(self, "Select Model Folder")
+        if not folder:
+            return  # User cancelled
+
+        if config.get("PROJECT_LOADED", False) is False:
+            QMessageBox.warning(self, "No Project Loaded", "Please load or create a project before loading a model.")
+            return
+        
+        pt_files = [f for f in os.listdir(folder) if f.endswith('.pt')]
+        yaml_file = os.path.join(folder, "dataset.yaml")
+
+        if pt_files and os.path.isfile(yaml_file):
+            # Show warning dialog before merging labels
+            reply = QMessageBox.warning(
+                self,
+                "Warning: You're about to merge two workspaces",
+                "The action you're about to take will bring a new set of labels to your workspace, and the labels from the loaded model will be appended to your dataset.yaml file.\n\nThis action cannot be undone. Do you wish to proceed?\n\nIf your project already contains annotations you may want to consider creating a new project if you don't want your labels to be combined.",
+                QMessageBox.Ok | QMessageBox.Cancel
+            )
+            if reply != QMessageBox.Ok:
+                return
+            
+            print("Model successfully loaded")
+            config["CURRENT_MODEL_PATH"] = folder
+            # initialize a predictormanager to parse labels
+            pt_file = os.path.join(folder, pt_files[0])
+            self.predictor_manager = PredictorManager(yaml_file, pt_file)
+            
+            self.set_current_model_label() # update the label in the UI to know which model we're using
+            # Update the merged labels into UI and saved them into project's yaml
+            self.update_label_buttons()
+            self.save_labels_to_yaml()
+            
+            
+        else:
+            QMessageBox.warning(self, "Missing Files", "Both a .pt model file and dataset.yaml must be present in the selected folder.")
+
+
+    def on_click_predict(self):
+        """
+        Handler for predictBtn. Checks if CURRENT_MODEL_PATH exists and contains a .pt file.
+        """
+        from PyQt5.QtWidgets import QMessageBox
+        model_dir = config.get("CURRENT_MODEL_PATH", "")
+        if not model_dir or not os.path.isdir(model_dir):
+            QMessageBox.warning(self, "Prediction Error", "No model directory set. Please load a model first.")
+            return
+        pt_files = [f for f in os.listdir(model_dir) if f.endswith('.pt')]
+        if not pt_files:
+            QMessageBox.warning(self, "Prediction Error", "No .pt model file found in the selected model directory.")
+            return
+        
+        self.statusBar().showMessage("Making a prediction...")
+        # pass the model (.pt) path and the current image path to the predictor manager
+        results = self.predictor_manager(self.image_manager.get_current_image_path())
+        if len(results) == 0:
+            self.statusBar().showMessage("No predictions were made for the current image.", 3000)
+            return
+        else:
+            self.statusBar().showMessage(f"Prediction completed with {len(results)} results.", 3000)
+        # iterate over the results and create instances of bounding boxes
+        self.ui.spectroPanel.box_manager.instantiate_from_predictions(results) 
+        self.ui.spectroPanel.update()
+    
+    def set_current_model_label(self):
+        """
+        Helper to set the CurrentModelLabel text to the folder name of CURRENT_MODEL_PATH.
+        If not set, defaults to "".
+        """
+        model_path = config.get("CURRENT_MODEL_PATH", "")
+        if model_path:
+            folder_name = os.path.basename(os.path.normpath(model_path))
+            self.ui.CurrentModelLabel.setText(folder_name)
+        else:
+            self.ui.CurrentModelLabel.setText("")
     
     def wrapper_default_downloader(self):
         """Wrapper method to handle the download of default models"""
@@ -93,13 +202,13 @@ class App(QMainWindow):
             root_path = config.get("ROOT")
             if root_path:
                 # show a message in the statusbar
-                self.statusBar().showMessage("Downloading models, please wait...")
+                self.statusBar().showMessage("Downloading model, please wait...")
                 # force the status bar to update
                 QApplication.processEvents()
 
                 success = self.model_manager.download_default_models(root_path)
                 if success:
-                    QMessageBox.information(self, "Download Models", "Default models downloaded successfully!")
+                    QMessageBox.information(self, "Download Model", "Default model downloaded successfully!")
                     self.statusBar().clearMessage()
                     
                     # Read existing config
@@ -114,8 +223,7 @@ class App(QMainWindow):
                     if len(self.model_manager.model_paths) > 0:
                         with open(json_file_path, "w") as json_file:
                             json.dump(config_data, json_file, indent=2)
-                    # Update the dropdown list
-                    self.list_models_in_dropdown()
+                    
             else:
                 QMessageBox.warning(self, "Download Models", "Project root path not set!")
         else:
@@ -496,18 +604,6 @@ class App(QMainWindow):
             elif child.layout():
                 self.clear_layout(child.layout())
                 
-    def list_models_in_dropdown(self):
-        '''
-        Populate the model selection dropdown with available models from model_manager
-        '''
-        if not self.model_manager.model_paths:
-            return
-        
-        self.ui.modelDropdown.clear()  # Clear existing items
-        for model in self.model_manager.model_paths:
-            model_name = model.get("name", "Unnamed Model")
-            self.ui.modelDropdown.addItem(model_name)
-            
     def load_existing_project(self):
         '''
         Open the File Manager to select a folder that already contains a configuration file.
@@ -538,9 +634,9 @@ class App(QMainWindow):
                         QMessageBox.warning(self, "Load Project", "Configuration file is missing required paths. Please create a new project.")
                         return
                     config["PROJECT_LOADED"] = True
-                    # if models paths are found, call the list_models_in_dropdown function
-                    if self.model_manager.model_paths:
-                        self.list_models_in_dropdown()
+                    # # if models paths are found, call the list_models_in_dropdown function
+                    # if self.model_manager.model_paths:
+                    #     self.list_models_in_dropdown()
                     # Initialize the image manager with the loaded paths
                     self.initialize_image_manager()
                     # Load annotations for the first image
@@ -881,6 +977,9 @@ class App(QMainWindow):
         '''
         if checked:
             self._set_mode("BOX")
+        
+        # update status label
+        self.update_statusLabel("Mode: BOX (Draw)")
 
     def on_erase_mode_toggled(self, checked: bool):
         '''
@@ -889,7 +988,8 @@ class App(QMainWindow):
         '''
         if checked:
             self._set_mode("ERASE")
-
+            self.update_statusLabel("Mode: ERASE (Delete)")
+            
     def on_update_mode_toggled(self, checked: bool):
         '''
         Toggle interaction mode to UPDATE mode.
@@ -898,6 +998,7 @@ class App(QMainWindow):
         '''
         if checked:
             self._set_mode("UPDATE")
+            self.update_statusLabel("Mode: UPDATE (Change Label)")
 
     def keyPressEvent(self, event):
         '''
@@ -965,11 +1066,16 @@ class App(QMainWindow):
         idx = max(0, min(idx, total_images - 1))
         self.go_to_image(idx)
 
+
 if __name__ == "__main__":
-    import sys
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = App()
     MainWindow.show()
     sys.exit(app.exec_())
+#     import sys
+#     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+#     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+#     app = QtWidgets.QApplication(sys.argv)
+#     MainWindow = App()
+#     MainWindow.show()
+#     sys.exit(app.exec_())

@@ -12,11 +12,11 @@ class ModelManager():
             {
                 'url': hf_hub_url(
                     repo_id=self.repo_id,
-                    filename="spectrai_ultralytics_ir.pt",
+                    filename="spectrai_ultralytics_IR.pt",
                     revision="main"
                 ),
                 'repo_id': self.repo_id,
-                'filename': "spectrai_ultralytics_ir.pt"
+                'filename': "spectrai_ultralytics_IR.pt"
             },
         ]
         
@@ -62,5 +62,16 @@ class ModelManager():
                 raise ValueError(f"Checksum mismatch for {model['filename']}")
             _model_details = {"name": model['filename'], "path": str(model_path)}
             self.model_paths.append(_model_details)
+
+            # Download dataset.yaml
+            yaml_url = hf_hub_url(repo_id=model['repo_id'], filename="dataset.yaml", revision="main")
+            yaml_path = model_dir / "dataset.yaml"
+            if not yaml_path.exists():
+                with requests.get(yaml_url, stream=True, timeout=60) as r:
+                    r.raise_for_status()
+                    with open(yaml_path, "wb") as f:
+                        for chunk in r.iter_content(chunk_size=1024 * 1024):
+                            if chunk:
+                                f.write(chunk)
         
         return 1 #return success

@@ -36,6 +36,12 @@ class ImageManager():
         self.scaled_width = 0
         self.scaled_height = 0
 
+    def get_current_image_path(self):
+        '''
+        Returns the path of the current image being displayed
+        '''
+        return self.image_list[self.current_index]
+    
     def load_image(self):
         """
         Load the image at current_index and return a QPixmap ready for QLabel display.
@@ -213,3 +219,5 @@ class ImageManager():
         '''
         if self.current_index > 0:
             self.current_index -= 1
+            
+    

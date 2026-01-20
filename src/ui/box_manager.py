@@ -200,3 +200,26 @@ class BoxManager:
     
     def __len__(self) -> int:
         return self.count()
+
+    def instantiate_from_predictions(self, predictions: list):
+            """
+            Given a list of prediction dictionaries, create and add bounding box instances to the manager.
+            Does not overwrite existing boxes.
+            Args:
+                predictions (list): List of dicts with keys 'x', 'y', 'w', 'h', 'idx'
+            """
+            for pred in predictions:
+                x = pred['x']
+                y = pred['y']
+                w = pred['w']
+                h = pred['h']
+                idx = pred['idx']
+                box = BoundingBox(
+                    x=int(x),
+                    y=int(y),
+                    width=int(w),
+                    height=int(h),
+                    label_id=idx,
+                    is_prediction=True
+                )
+                self.add_box(box)

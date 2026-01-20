@@ -18,7 +18,7 @@ class BoundingBox:
     independent of scaling or display transformations.
     """
     
-    def __init__(self, x: int, y: int, width: int, height: int, label_id: int, box_id: str = None):
+    def __init__(self, x: int, y: int, width: int, height: int, label_id: int, box_id: str = None, is_prediction=False):
         """
         Initialize a bounding box.
         
@@ -37,7 +37,7 @@ class BoundingBox:
         self.label_id = label_id
         self.box_id = box_id if box_id is not None else str(uuid.uuid4())
         self.status = False  # True if selected, False otherwise
-    
+        self.default_color =  QColor(255, 140, 0) if is_prediction else QColor(200, 0, 0)
     def get_bounds(self) -> tuple:
         """
         Get the bounding box bounds.
@@ -119,7 +119,7 @@ class BoundingBox:
         )
         
         # Choose color based on status: green if selected, red otherwise
-        color = QColor(0, 200, 0) if self.status else QColor(200, 0, 0)
+        color = QColor(0, 200, 0) if self.status else self.default_color
         pen = QPen(color)
         pen.setWidth(2)
         painter.setPen(pen)

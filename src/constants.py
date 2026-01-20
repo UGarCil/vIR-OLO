@@ -27,7 +27,7 @@ config = {
     "LABELS": [],
     "MODE": "BOX",
     "CURRENT_LABEL": 1,
-    "CURRENT_MODEL": "",
+    "CURRENT_MODEL_PATH": "",
 }
 
 
