@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>954</width>
-    <height>582</height>
+    <width>1634</width>
+    <height>921</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -204,7 +204,11 @@ border: 1px solid grey;</string>
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="modelDropdown"/>
+            <widget class="QLabel" name="CurrentModelLabel">
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </item>
@@ -343,9 +347,9 @@ background-color: rgb(148, 157, 148);</string>
           <property name="geometry">
            <rect>
             <x>0</x>
-            <y>-109</y>
-            <width>168</width>
-            <height>468</height>
+            <y>0</y>
+            <width>215</width>
+            <height>593</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -981,7 +985,7 @@ background-color: rgb(148, 157, 148);</string>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="trainBtn">
+           <widget class="QPushButton" name="updateBoxLabelBtn">
             <property name="minimumSize">
              <size>
               <width>60</width>
@@ -999,7 +1003,7 @@ background-color: rgb(148, 157, 148);</string>
             </property>
             <property name="icon">
              <iconset>
-              <normaloff>icons/train_icon.png</normaloff>icons/train_icon.png</iconset>
+              <normaloff>icons/updateBoxLabel_icon.png</normaloff>icons/updateBoxLabel_icon.png</iconset>
             </property>
             <property name="iconSize">
              <size>
@@ -1053,8 +1057,8 @@ background-color: rgb(148, 157, 148);</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>954</width>
-     <height>22</height>
+     <width>1634</width>
+     <height>47</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1064,7 +1068,15 @@ background-color: rgb(148, 157, 148);</string>
     <addaction name="actionNew"/>
     <addaction name="actionLoad"/>
    </widget>
+   <widget class="QMenu" name="menuModels">
+    <property name="title">
+     <string>Models</string>
+    </property>
+    <addaction name="actionLoadModel"/>
+    <addaction name="actionDownloadDefaultModels"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuModels"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionNew">
@@ -1075,6 +1087,16 @@ background-color: rgb(148, 157, 148);</string>
   <action name="actionLoad">
    <property name="text">
     <string>Load</string>
+   </property>
+  </action>
+  <action name="actionLoadModel">
+   <property name="text">
+    <string>Load Model</string>
+   </property>
+  </action>
+  <action name="actionDownloadDefaultModels">
+   <property name="text">
+    <string>Download Default Models</string>
    </property>
   </action>
  </widget>
