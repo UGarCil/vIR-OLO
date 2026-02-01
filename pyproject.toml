@@ -13,4 +13,5 @@ dependencies = [
     "numpy",
     "PyYAML",
     "huggingface_hub",
+    "requests",
 ]
