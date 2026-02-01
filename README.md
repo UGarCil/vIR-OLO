@@ -5,7 +5,7 @@
 ![PyQt5](https://img.shields.io/badge/PyQt5-GUI-orange)
 
 <div align="center">
-    <img src="./logo/cham_anim.gif" alt="vIR-OLO Animation" width="80%">
+    <img src="./logo/cham_anim.gif" alt="vIR-OLO Animation" width="70%">
 </div>
 
 
@@ -39,6 +39,11 @@ The application provides a complete PyQt5-based GUI for creating YOLO-format ann
 - **Visual feedback** - color-coded bounding boxes (green=selected, red=unselected)
 - **Real-time preview** during box creation
 - **Status indicators** for project state and active models
+
+
+<div align="center">
+    <img src="./logo/demo.png" alt="vIR-OLO Animation" width="90%">
+</div>
 
 ---
 
