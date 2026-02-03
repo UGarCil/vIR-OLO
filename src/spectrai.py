@@ -903,6 +903,10 @@ class App(QMainWindow):
             # Load annotations for the new image
             self.load_annotations_for_current_image()
             self.update_image_index_display()
+            # Show current image name in status bar
+            current_image_path = self.image_manager.get_current_image_path()
+            image_name = os.path.basename(current_image_path)
+            self.statusBar().showMessage(f"Current image: {image_name}", 15000)
     
     def update_image_index_display(self):
         """Show the current image index in the ImageGoLineEd field."""

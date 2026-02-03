@@ -5,19 +5,28 @@ from pathlib import Path
 class ModelManager():
     def __init__(self):
         self.models_root = ""
-        self.repo_id = "UrielGC/spectrai-IR-YOLO"
         self.model_paths = []
         # Store models as dictionaries with all needed information
         self.models_custom = [
             {
                 'url': hf_hub_url(
-                    repo_id=self.repo_id,
-                    filename="spectrai_ultralytics_IR.pt",
+                    repo_id="UrielGC/spectrai-IR-YOLO-10FG",
+                    filename="spectrai_ultralytics_IR_10FG.pt",
                     revision="main"
                 ),
-                'repo_id': self.repo_id,
-                'filename': "spectrai_ultralytics_IR.pt"
+                'repo_id': "UrielGC/spectrai-IR-YOLO-10FG",
+                'filename': "spectrai_ultralytics_IR_10FG.pt"
             },
+            {
+                'url': hf_hub_url(
+                    repo_id="UrielGC/spectrai-IR-YOLO-12FG",
+                    filename="spectrai_ultralytics_IR_12FG.pt",
+                    revision="main"
+                ),
+                'repo_id': "UrielGC/spectrai-IR-YOLO-12FG",
+                'filename': "spectrai_ultralytics_IR_12FG.pt"
+            },
+            
         ]
         
 
