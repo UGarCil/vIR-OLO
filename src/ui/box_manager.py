@@ -107,18 +107,23 @@ class BoxManager:
         Returns:
             str: The box_id of the newly created box
         """
-        # Convert normalized coordinates to absolute pixels
-        abs_width = norm_width * img_width
-        abs_height = norm_height * img_height
-        abs_x = (x_center * img_width) - (abs_width / 2)
-        abs_y = (y_center * img_height) - (abs_height / 2)
+        # Convert normalized coordinates to absolute pixel edges, then round.
+        x1 = (x_center - norm_width / 2) * img_width
+        y1 = (y_center - norm_height / 2) * img_height
+        x2 = (x_center + norm_width / 2) * img_width
+        y2 = (y_center + norm_height / 2) * img_height
+
+        x = round(x1)
+        y = round(y1)
+        width = max(1, round(x2) - x)
+        height = max(1, round(y2) - y)
         
         # Create and add the box
         box = BoundingBox(
-            x=int(abs_x),
-            y=int(abs_y),
-            width=int(abs_width),
-            height=int(abs_height),
+            x=x,
+            y=y,
+            width=width,
+            height=height,
             label_id=label_id
         )
         return self.add_box(box)

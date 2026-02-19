@@ -22,6 +22,7 @@ from models.predict import PredictorManager
 
 QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
 QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+YOLO_COORD_PRECISION = 16
 
 class App(QMainWindow):
     def __init__(self):
@@ -804,8 +805,14 @@ class App(QMainWindow):
                 norm_width = box.width / img_width
                 norm_height = box.height / img_height
                 
-                # Write in YOLO format: label_id x_center y_center width height
-                f.write(f"{box.label_id}\t{x_center:.6f}\t{y_center:.6f}\t{norm_width:.6f}\t{norm_height:.6f}\n")
+                # Write in YOLO format with high precision for small-box fidelity.
+                f.write(
+                    f"{box.label_id}\t"
+                    f"{x_center:.{YOLO_COORD_PRECISION}f}\t"
+                    f"{y_center:.{YOLO_COORD_PRECISION}f}\t"
+                    f"{norm_width:.{YOLO_COORD_PRECISION}f}\t"
+                    f"{norm_height:.{YOLO_COORD_PRECISION}f}\n"
+                )
         
         # print(f"Saved {len(boxes)} annotations to: {annotation_path}")
         return True

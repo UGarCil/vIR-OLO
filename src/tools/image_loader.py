@@ -175,9 +175,10 @@ class ImageManager():
             relative_x >= self.scaled_width or relative_y >= self.scaled_height):
             return None
         
-        # Convert to original image coordinates using scale factors
-        image_x = int(relative_x / self.scale_x) if self.scale_x > 0 else 0
-        image_y = int(relative_y / self.scale_y) if self.scale_y > 0 else 0
+        # Convert to original image coordinates using scale factors.
+        # Round to nearest pixel to avoid systematic floor bias.
+        image_x = round(relative_x / self.scale_x) if self.scale_x > 0 else 0
+        image_y = round(relative_y / self.scale_y) if self.scale_y > 0 else 0
         
         # Clamp to image bounds
         image_x = max(0, min(image_x, self.original_width - 1))
@@ -196,9 +197,9 @@ class ImageManager():
         Returns:
             tuple: (screen_x, screen_y) on the screen
         """
-        # Scale from image space to screen space
-        scaled_x = int(image_x * self.scale_x)
-        scaled_y = int(image_y * self.scale_y)
+        # Scale from image space to screen space using nearest pixel rounding.
+        scaled_x = round(image_x * self.scale_x)
+        scaled_y = round(image_y * self.scale_y)
         
         # Add offset to get absolute screen position
         screen_x = scaled_x + self.offset_x
